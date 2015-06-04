@@ -575,7 +575,7 @@ static void cliRxFail(char *cmdline)
 
     if (isEmpty(cmdline)) {
         // print out rxConfig failsafe settings
-        for (channel = 0; channel < MAX_SUPPORTED_RC_CHANNEL_COUNT; channel++) {
+        for (channel = 0; channel < MAX_SUPPORTED_RC_CHANNEL_COUNT-4; channel++) {
             cliRxFail(itoa(channel, buf, 10));
         }
     } else {
@@ -583,7 +583,7 @@ static void cliRxFail(char *cmdline)
         char *ptr = cmdline;
 
         channel = atoi(ptr++);
-        if (channel < MAX_SUPPORTED_RC_CHANNEL_COUNT) {
+        if ((channel < MAX_SUPPORTED_RC_CHANNEL_COUNT-4)) {
             ptr = strchr(ptr, ' ');
             if (ptr) {
                 value = atoi(++ptr);
@@ -600,7 +600,7 @@ static void cliRxFail(char *cmdline)
             // 3. recursive use for full list.
             printf("rxfail %u %d\r\n", channel, RXFAIL_STEP_TO_CHANNEL_VALUE(masterConfig.rxConfig.rx_fail_usec_steps[channel]));
         } else {
-            printf("channel must be < %u\r\n", MAX_SUPPORTED_RC_CHANNEL_COUNT);
+            printf("channel must be < %u\r\n", MAX_SUPPORTED_RC_CHANNEL_COUNT-4);
         }
     }
 }

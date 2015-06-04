@@ -1193,9 +1193,9 @@ static bool processOutCommand(uint8_t cmdMSP)
         break;
 
     case MSP_RXFAIL_CONFIG:
-        headSerialReply(2 * rxRuntimeConfig.channelCount);
-        for (i = 0; i < rxRuntimeConfig.channelCount; i++) {
-            serialize16(RXFAIL_STEP_TO_CHANNEL_VALUE(masterConfig.rxConfig.rx_fail_usec_steps[i]));
+        headSerialReply(2 * (rxRuntimeConfig.channelCount-4));
+        for (i = 4; i < rxRuntimeConfig.channelCount; i++) {
+            serialize16(RXFAIL_STEP_TO_CHANNEL_VALUE(masterConfig.rxConfig.rx_fail_usec_steps[i-4]));
         }
         break;
 
@@ -1646,11 +1646,11 @@ static bool processInCommand(void)
     case MSP_SET_RXFAIL_CONFIG:
         {
             uint8_t channelCount = currentPort->dataSize / sizeof(uint16_t);
-            if (channelCount > MAX_SUPPORTED_RC_CHANNEL_COUNT) {
+            if (channelCount > MAX_SUPPORTED_RC_CHANNEL_COUNT-4) {
                 headSerialError(0);
             } else {
-                for (i = 0; i < channelCount; i++)
-                    masterConfig.rxConfig.rx_fail_usec_steps[i] = CHANNEL_VALUE_TO_RXFAIL_STEP(read16());
+                for (i = 4; i < channelCount; i++)
+                    masterConfig.rxConfig.rx_fail_usec_steps[i-4] = CHANNEL_VALUE_TO_RXFAIL_STEP(read16());
             }
         }
         break;
