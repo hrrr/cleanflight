@@ -230,6 +230,8 @@ static const char * const boardIdentifier = TARGET_BOARD_IDENTIFIER;
 
 #define MSP_RXFAIL_CONFIG               77 //out message         Returns RXFAIL settings
 #define MSP_SET_RXFAIL_CONFIG           78 //in message          Sets RXFAIL settings
+#define MSP_PID_FILTERS                 79 //out message         Returns PID cutoff filter settings
+#define MSP_SET_PID_FILTERS             80 //in message          Sets PID cutoff filter settings
 
 //
 // Baseflight MSP commands (if enabled they exist in Cleanflight)
@@ -1197,6 +1199,14 @@ static bool processOutCommand(uint8_t cmdMSP)
         for (i = 4; i < rxRuntimeConfig.channelCount; i++) {
             serialize16(RXFAIL_STEP_TO_CHANNEL_VALUE(masterConfig.rxConfig.rx_fail_usec_steps[i-4]));
         }
+    case MSP_PID_FILTERS:
+        headSerialReply(9);
+        serialize16(masterConfig.gyro_lpf);
+        serialize8(currentProfile->pidProfile.gyro_cut_hz);
+        serialize8(currentProfile->pidProfile.pterm_cut_hz);
+        serialize8(currentProfile->pidProfile.dterm_cut_hz);
+        serialize16(currentProfile->pidProfile.yaw_p_limit);
+        serialize16(masterConfig.mixerConfig.yaw_jump_prevention_limit);
         break;
 
     case MSP_RSSI_CONFIG:
@@ -1653,6 +1663,13 @@ static bool processInCommand(void)
                     masterConfig.rxConfig.rx_fail_usec_steps[i-4] = CHANNEL_VALUE_TO_RXFAIL_STEP(read16());
             }
         }
+    case MSP_SET_PID_FILTERS:
+        masterConfig.gyro_lpf = read16();
+        currentProfile->pidProfile.gyro_cut_hz = read8();
+        currentProfile->pidProfile.pterm_cut_hz = read8();
+        currentProfile->pidProfile.dterm_cut_hz = read8();
+        currentProfile->pidProfile.yaw_p_limit = read16();
+        masterConfig.mixerConfig.yaw_jump_prevention_limit = read16();
         break;
 
     case MSP_SET_RSSI_CONFIG:
