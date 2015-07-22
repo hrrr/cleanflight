@@ -682,7 +682,6 @@ void mspInit(serialConfig_t *serialConfig)
         activeBoxIds[activeBoxIdCount++] = BOXSONAR;
     }
 
-
 #ifdef USE_SERVOS
     if (masterConfig.mixerMode == MIXER_CUSTOM_AIRPLANE) {
         activeBoxIds[activeBoxIdCount++] = BOXSERVO1;
@@ -690,11 +689,13 @@ void mspInit(serialConfig_t *serialConfig)
         activeBoxIds[activeBoxIdCount++] = BOXSERVO3;
     }
 #endif
+
 #ifdef BLACKBOX
     if (feature(FEATURE_BLACKBOX)){
         activeBoxIds[activeBoxIdCount++] = BOXBLACKBOX;
     }
 #endif
+
     memset(mspPorts, 0x00, sizeof(mspPorts));
     mspAllocateSerialPorts(serialConfig);
 }
