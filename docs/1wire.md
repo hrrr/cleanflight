@@ -1,6 +1,14 @@
 # 1-wire passthrough esc programming
 
-Currently supported on the STM32F3DISCOVERY, NAZE32 (including clones such as the FLIP32) and CC3D.
+### ESCs must have the BlHeli Bootloader.
+
+If your ESCs didn't come with BlHeli Bootloader, you'll need to flash them with an ArduinoISP programmer first. [Here's a guide](http://bit.ly/blheli-f20).
+
+This is the option you need to select for the bootloader:
+
+![Flashing BlHeli Bootloader](assets/images/blheli-bootloader.png)
+
+Currently supported on the SPRACINGF3, STM32F3DISCOVERY, NAZE32 (including clones such as the FLIP32) and CC3D.
 
 ## Wiring
 
@@ -8,9 +16,15 @@ Currently supported on the STM32F3DISCOVERY, NAZE32 (including clones such as th
 
   - For the CC3D, connect [a USB to UART adapter](http://bit.ly/cf-cp2102) to the main port. If you need one, I prefer the [CP2102](http://bit.ly/cf-cp2102) as it is cheap and [the driver](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx) is readily available.
 
+    - This is how you plug in the USB/UART adapter on the CC3D. Be sure to also plug in the normal USB cable as well.
+
+    ![Flashing BlHeli Bootloader](assets/images/serial1wire-cc3d-wiring.jpg)
+
   - In the case that your board does not power on fully without a battery attached, it is OK to attach the battery before following the steps below. However, it may not be necessary in all cases.
 
 ## Usage
+
+How to for the CC3D: [https://youtu.be/fmUPL1lRcss](https://youtu.be/fmUPL1lRcss)
 
   - Plug in the USB cable and connect to your board with the CleanFlight configurator.
 
@@ -42,9 +56,13 @@ Currently supported on the STM32F3DISCOVERY, NAZE32 (including clones such as th
 
   - Use BlHeli suite as normal.
 
-  - When you're finished with one ESC, click "Disconnect" then power down the board. E.g. remove the flight battery and unplug the USB cable. Then repeat the whole process for the next ESC
+  - When you're finished with one ESC, click "Disconnect"
 
-    - In the future, powering down the board can be avoided and all ESCs can be configured by CleanFlight. I'll be working on this next...
+  - Unplug the flight control board from Blheli.
+
+    - On the CC3D this means you can unplug just the USB/UART adapter, leaving the USB cable attached. The advantage is that Cleanflight will stay connected and you'll only have to reconnect BlHeli.
+
+    - On the NAZE you'll have to unplug USB cable and start over on the next ESC.
 
 ## Implementing and Configuring targets
 
@@ -92,4 +110,3 @@ On the STM32F3DISCOVERY, an external pullup on the ESC line may be necessary. I 
 ## Todo
 
 Implement the BlHeli bootloader configuration protocol in the CleanFlight GUI
-
