@@ -708,6 +708,8 @@ void filterGyro(void) {
         else {
 	        gyroADC[axis] = filterApplyPt1(gyroADC[axis], &gyroADCState[axis], currentProfile->pidProfile.gyro_cut_hz, dT);
         }
+    }
+}
 
 void getArmingChannel(modeActivationCondition_t *modeActivationConditions, uint8_t *armingChannel) {
     for (int index = 0; index < MAX_MODE_ACTIVATION_CONDITION_COUNT; index++) {
