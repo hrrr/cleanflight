@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of Cleanflight.
  *
  * Cleanflight is free software: you can redistribute it and/or modify
@@ -34,6 +34,8 @@
 #include "sensor.h"
 #include "accgyro.h"
 #include "accgyro_mpu6050.h"
+
+#include "gyro_sync.h"
 
 //#define DEBUG_MPU_DATA_READY_INTERRUPT
 
@@ -138,19 +140,6 @@
 // RF = Register Flag
 #define MPU_RF_DATA_RDY_EN (1 << 0)
 
-#define MPU6050_SMPLRT_DIV      0       // 8000Hz
-
-enum lpf_e {
-    INV_FILTER_256HZ_NOLPF2 = 0,
-    INV_FILTER_188HZ,
-    INV_FILTER_98HZ,
-    INV_FILTER_42HZ,
-    INV_FILTER_20HZ,
-    INV_FILTER_10HZ,
-    INV_FILTER_5HZ,
-    INV_FILTER_2100HZ_NOLPF,
-    NUM_FILTER
-};
 enum gyro_fsr_e {
     INV_FSR_250DPS = 0,
     INV_FSR_500DPS,
@@ -176,6 +165,9 @@ static void mpu6050AccInit(void);
 static bool mpu6050AccRead(int16_t *accData);
 static void mpu6050GyroInit(void);
 static bool mpu6050GyroRead(int16_t *gyroADC);
+static void checkMPU6050DataReady(bool *mpuDataReadyPtr);
+
+static volatile bool mpuDataReady;
 
 typedef enum {
     MPU_6050_HALF_RESOLUTION,
@@ -193,6 +185,8 @@ void MPU_DATA_READY_EXTI_Handler(void)
     }
 
     EXTI_ClearITPendingBit(mpu6050Config->exti_line);
+
+    mpuDataReady = true;
 
 #ifdef DEBUG_MPU_DATA_READY_INTERRUPT
     // Measure the delta in micro seconds between calls to the interrupt handler
@@ -368,6 +362,7 @@ bool mpu6050GyroDetect(const mpu6050Config_t *configToUse, gyro_t *gyro, uint16_
 
     gyro->init = mpu6050GyroInit;
     gyro->read = mpu6050GyroRead;
+    gyro->intStatus = checkMPU6050DataReady;
 
     // 16.4 dps/lsb scalefactor
     gyro->scale = 1.0f / 16.4f;
@@ -429,9 +424,9 @@ static void mpu6050GyroInit(void)
     bool ack;
     ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_PWR_MGMT_1, 0x80);      //PWR_MGMT_1    -- DEVICE_RESET 1
     delay(100);
-    ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_SMPLRT_DIV, 0x00); //SMPLRT_DIV    -- SMPLRT_DIV = 0  Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)
-    ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_PWR_MGMT_1, 0x03); //PWR_MGMT_1    -- SLEEP 0; CYCLE 0; TEMP_DIS 0; CLKSEL 3 (PLL with Z Gyro reference)
-    delay(15); //PLL Settling time when changing CLKSEL is max 10ms.  Use 15ms to be sure 
+    ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_PWR_MGMT_1, 0x03);      //PWR_MGMT_1    -- SLEEP 0; CYCLE 0; TEMP_DIS 0; CLKSEL 3 (PLL with Z Gyro reference)
+    ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_SMPLRT_DIV, gyroMPU6xxxGetDividerDrops());  //SMPLRT_DIV    -- SMPLRT_DIV = 7  Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)
+    delay(15); //PLL Settling time when changing CLKSEL is max 10ms.  Use 15ms to be sure
     ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_CONFIG, mpuLowPassFilter); //CONFIG        -- EXT_SYNC_SET 0 (disable input pin for data sync) ; default DLPF_CFG = 0 => ACC bandwidth = 260Hz  GYRO bandwidth = 256Hz)
     ack = i2cWrite(MPU6050_ADDRESS, MPU_RA_GYRO_CONFIG, INV_FSR_2000DPS << 3);   //GYRO_CONFIG   -- FS_SEL = 3: Full scale set to 2000 deg/sec
 
@@ -464,4 +459,13 @@ static bool mpu6050GyroRead(int16_t *gyroADC)
     gyroADC[2] = (int16_t)((buf[4] << 8) | buf[5]);
 
     return true;
+}
+
+void checkMPU6050DataReady(bool *mpuDataReadyPtr) {
+	if (mpuDataReady) {
+		*mpuDataReadyPtr = true;
+	    mpuDataReady= false;
+	} else {
+		*mpuDataReadyPtr = false;
+	}
 }

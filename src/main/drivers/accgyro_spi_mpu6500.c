@@ -31,6 +31,7 @@
 #include "sensor.h"
 #include "accgyro.h"
 #include "accgyro_spi_mpu6500.h"
+#include "gyro_sync.h"
 
 enum lpf_e {
     INV_FILTER_256HZ_NOLPF2 = 0,
@@ -75,6 +76,7 @@ static void mpu6500AccInit(void);
 static bool mpu6500AccRead(int16_t *accData);
 static void mpu6500GyroInit(void);
 static bool mpu6500GyroRead(int16_t *gyroADC);
+static void checkMPU6500Interrupt(bool *gyroIsUpdated);
 
 extern uint16_t acc_1G;
 
@@ -167,6 +169,7 @@ bool mpu6500SpiGyroDetect(gyro_t *gyro, uint16_t lpf)
 
     gyro->init = mpu6500GyroInit;
     gyro->read = mpu6500GyroRead;
+    gyro->intStatus = checkMPU6500Interrupt;
 
     // 16.4 dps/lsb scalefactor
     gyro->scale = 1.0f / 16.4f;
@@ -228,7 +231,8 @@ static void mpu6500GyroInit(void)
     mpu6500WriteRegister(MPU6500_RA_GYRO_CFG, INV_FSR_2000DPS << 3);
     mpu6500WriteRegister(MPU6500_RA_ACCEL_CFG, INV_FSR_8G << 3);
     mpu6500WriteRegister(MPU6500_RA_LPF, mpuLowPassFilter);
-    mpu6500WriteRegister(MPU6500_RA_RATE_DIV, 0); // 1kHz S/R
+    mpu6500WriteRegister(MPU6500_RA_RATE_DIV, gyroMPU6xxxGetDividerDrops()); // Get Divider drop count
+    mpu6500WriteRegister(MPU6500_RA_INT_ENABLE, 0x01);
 }
 
 static bool mpu6500GyroRead(int16_t *gyroADC)
@@ -242,4 +246,16 @@ static bool mpu6500GyroRead(int16_t *gyroADC)
     gyroADC[Z] = (int16_t)((buf[4] << 8) | buf[5]);
 
     return true;
+}
+
+void checkMPU6500Interrupt(bool *gyroIsUpdated) {
+	uint8_t mpuIntStatus;
+
+	mpu6500ReadRegister(MPU6500_RA_INT_STATUS, &mpuIntStatus, 1);
+
+    if (mpuIntStatus) {
+        *gyroIsUpdated = true;
+    } else {
+        *gyroIsUpdated = false;
+    }
 }
