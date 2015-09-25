@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <math.h>
 
+#include "debug.h"
 #include "platform.h"
 
 #include "common/maths.h"
@@ -87,6 +88,8 @@ enum {
     ALIGN_ACCEL = 1,
     ALIGN_MAG = 2
 };
+
+//#define DEBUG_JITTER 3
 
 /* VBAT monitoring interval (in microseconds) - 1s*/
 #define VBATINTERVAL (6 * 3500)       
@@ -724,6 +727,14 @@ void filterRc(void){
     }
 }
 
+bool imuUpdateAccDelayed(void) {
+    if (flightModeFlags) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 void loop(void)
 {
     static uint32_t loopTime;
@@ -774,13 +785,30 @@ void loop(void)
     if (gyroSyncCheckUpdate() || (int32_t)(currentTime - (loopTime + GYRO_WATCHDOG_DELAY)) >= 0) {
 
         loopTime = currentTime + targetLooptime;
-        imuUpdate(&currentProfile->accelerometerTrims);
 
+        // Determine current flight mode. When no acc needed in pid calculations we should only read gyro to reduce latency
+        if (imuUpdateAccDelayed()) {
+            imuUpdate(&currentProfile->accelerometerTrims, ONLY_GYRO);  // When no level modes active read only gyro
+        } else {
+            imuUpdate(&currentProfile->accelerometerTrims, ACC_AND_GYRO);  // When level modes active read gyro and acc
+        }
 
         // Measure loop rate just after reading the sensors
         currentTime = micros();
         cycleTime = (int32_t)(currentTime - previousTime);
         previousTime = currentTime;
+
+#ifdef DEBUG_JITTER
+        static uint32_t previousCycleTime;
+
+		if (previousCycleTime > cycleTime) {
+		    debug[DEBUG_JITTER] = previousCycleTime - cycleTime;
+		} else {
+	        debug[DEBUG_JITTER] = cycleTime - previousCycleTime;
+		}
+		previousCycleTime = cycleTime;
+#endif
+
 
         dT = (float)targetLooptime * 0.000001f;
 
@@ -856,6 +884,11 @@ void loop(void)
 
         if (motorControlEnable) {
             writeMotors();
+        }
+
+        // When no level modes active read acc after motor update
+        if (imuUpdateAccDelayed()) {
+            imuUpdate(&currentProfile->accelerometerTrims, ONLY_ACC);
         }
 
 #ifdef BLACKBOX
